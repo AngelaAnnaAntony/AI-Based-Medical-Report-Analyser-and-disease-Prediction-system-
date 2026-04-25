@@ -1,0 +1,15 @@
+streamlit
+flask
+pandas
+numpy
+pdfplumber
+pytesseract
+opencv-python
+reportlab
+matplotlib
+geopy
+sqlite3
+folium
+streamlit_folium
+re
+base64
