@@ -1,11 +1,17 @@
 import pdfplumber
-import pytesseract
+#import pytesseract
 import cv2
 import numpy as np
 from PIL import Image
-import os
-os.environ["TESSDATA_PREFIX"] = r"C:\Program Files\Tesseract-OCR\tessdata"
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+#import os
+#os.environ["TESSDATA_PREFIX"] = r"C:\Program Files\Tesseract-OCR\tessdata"
+#pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+try:
+    import pytesseract
+    OCR_AVAILABLE = True
+except:
+    OCR_AVAILABLE = False
 
 def read_pdf(file):
     text=""
@@ -17,13 +23,18 @@ def read_pdf(file):
     return text
 
 def read_image(file):
-    image=Image.open(file)
-    image=np.array(image)
-    gray=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray=cv2.GaussianBlur(gray, (5,5), 0)
-    gray=cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)[1]
-    text=pytesseract.image_to_string(gray)
-    return text
+    if not OCR_AVAILABLE:
+        return "OCR not available in deployed version"
+    try: 
+        image=Image.open(file)
+        image=np.array(image)
+        gray=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray=cv2.GaussianBlur(gray, (5,5), 0)
+        gray=cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)[1]
+        text=pytesseract.image_to_string(gray)
+        return text
+    except:
+        return "Error reading image"
 
 def extract_text(uploaded_file):
     file_type=uploaded_file.type
