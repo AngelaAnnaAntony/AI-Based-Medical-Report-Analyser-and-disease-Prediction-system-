@@ -8,7 +8,7 @@ from modules.data_extraction import extract_medical_values, detect_report_type
 from modules.disease_detection import detect_diseases, extract_patient_details
 from modules.ai_disease_detection import detect_diseases_ai
 from modules.pdf_generator import generate_pdf
-from modules.Whatsapp_share import generate_whatsapp_link
+from modules.Whatsapp_share import generate_whatsapp_link_with_results
 from streamlit_folium import st_folium
 import folium
 import urllib.parse
@@ -195,28 +195,28 @@ def home_page():
             patient_name = name if name else st.session_state.fullname            
             age=age if age else "N/A"
             gender= gender if gender else "N/A"
+            values= extract_medical_values(text)
+            report_types=detect_report_type(text)
+            rule_results = detect_diseases(values, report_types)
+            ai_results = detect_diseases_ai(values)
+            results = rule_results + ai_results
             tab1, tab2, tab3=st.tabs(["Data Extraction", "Analysis & Recommendations", "Doctors near me"])
             with tab1:
               st.subheader("Extracted Text")
               st.text(text)
-              values= extract_medical_values(text)
-              report_types=detect_report_type(text)
               st.subheader("Detected Report Type")
               st.write(report_types)
               st.subheader("Extracted Medical Values")
               st.write(values)
 
             with tab2:
-              from modules.ai_disease_detection import detect_diseases_ai
-              rule_results = detect_diseases(values, report_types)
-              ai_results = detect_diseases_ai(values)
-              results = rule_results + ai_results
               st.subheader("Disease Detection Result")
               df=pd.DataFrame(results)
               st.table(df)
               st.write("---")
-              st.subheader("📍 Find a Doctor Near You")
+    
             with tab3:
+              st.subheader("📍 Find a Doctor Near You")
             # 1. Ask for the user's location
               user_city = st.text_input("Enter your City/Area to find specialists:", placeholder="e.g., Ghaziabad, Delhi, Mumbai")
 
@@ -237,52 +237,55 @@ def home_page():
                     # In a real app, we'd use GPS, but for now, we show a helpful link!
                     st.markdown(f"""
                         <div style="padding:10px; border-radius:10px; background-color:#e1f5fe; border-left: 5px solid #0288d1;">
-                            <strong>Action Required:</strong> Click the button below to see the best-rated <b>{doctor}s</b> in <b>{user_city}</b>.
+                        <strong>Action Required:</strong> Click the button below to see the best-rated <b>{doctor}s</b> in <b>{user_city}</b>.
                         </div>
                         <br>
                         <a href="{google_maps_url}" target="_blank">
                             <button style="background-color:#4285F4; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">
-                                📍 Open Google Maps for {doctor}
-                            </button>
+                            📍 Open Google Maps for {doctor}
+                        </button>
                         </a>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
                     st.write("")   
-        st.warning("""
-            ⚠️ Medical Disclaimer:
+            st.warning("""
+                    ⚠️ Medical Disclaimer:
 
-            This system is an AI-based medical report analyzer designed for educational purposes only. 
-            The results provided are not a medical diagnosis and should not be considered as professional medical advice. 
+                    This system is an AI-based medical report analyzer designed for educational purposes only. 
+                    The results provided are not a medical diagnosis and should not be considered as professional medical advice. 
 
-            Please consult a qualified doctor or healthcare professional for accurate diagnosis and treatment.
-            """)
-        pdf_file=generate_pdf(
-                results, 
-                patient_name=patient_name,
-                age=age,
-                gender=gender,
-                report_types=report_types
-            )
-        with open(pdf_file, "rb")as file:
-                st.download_button(
-                label="Download Result as PDF", data=file, file_name="medical_result.pdf", mime="application/pdf"
+                    Please consult a qualified doctor or healthcare professional for accurate diagnosis and treatment.
+                    """)
+            pdf_file=generate_pdf(
+                    results, 
+                    patient_name=patient_name,
+                    age=age,
+                    gender=gender,
+                    report_types=report_types
                 )
+            with open(pdf_file, "rb")as file:
+                    st.download_button(
+                    label="Download Result as PDF", data=file, file_name="medical_result.pdf", mime="application/pdf"
+                    )
 
-        whatsapp_link = generate_whatsapp_link()
-        st.markdown(
-        f"""
-        <a href="{whatsapp_link}" target="_blank">
-            <button style="
-            background-color:#25D366;
-            color:white;
-            padding:10px;
-            border:none;
-            border-radius:5px;
-            font-size:16px;
-            cursor:pointer;">
-            Share via WhatsApp
-            </button>
-        </a>
-        """,unsafe_allow_html=True)
+            if results:
+                whatsapp_link = generate_whatsapp_link_with_results(results)
+
+                st.success("📤 Share your result on WhatsApp")
+                st.markdown(f"""
+                    <a href="{whatsapp_link}" target="_blank">
+                        <button style="
+                            background-color:#25D366;
+                            color:white;
+                            padding:10px 20px;
+                            border:none;
+                            border-radius:8px;
+                            font-size:16px;
+                            cursor:pointer;">
+                            📤 Share on WhatsApp
+                        </button>
+                    </a>
+                    """,unsafe_allow_html=True
+                )
 
     if st.button("Logout"):
        st.session_state.page = "login"
